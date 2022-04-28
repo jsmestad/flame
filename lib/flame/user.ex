@@ -29,7 +29,7 @@ defmodule Flame.User do
     }
   """
 
-  @type t :: %{
+  @type t :: %__MODULE__{
           created_at: integer,
           custom_auth: boolean,
           disabled: boolean,

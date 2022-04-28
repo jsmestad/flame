@@ -224,7 +224,7 @@ defmodule Flame.Accounts do
   def find_user_by_email(client, email) when is_binary(email) do
     case do_request(client, "lookup", %{email: [email]}) do
       {:ok, %{"users" => [user]}} ->
-        {:ok, user}
+        User.new(user)
 
       {:ok, %{"users" => [_ | _]}} ->
         {:error, :multiple_matches}
@@ -238,7 +238,7 @@ defmodule Flame.Accounts do
   def get_user(client, token) when is_binary(token) do
     case do_request(client, "lookup", %{idToken: token}) do
       {:ok, %{"users" => [user]}} ->
-        {:ok, user}
+        User.new(user)
 
       {:ok, %{"kind" => "identitytoolkit#GetAccountInfoResponse"}} ->
         {:error, :user_not_found}
@@ -250,7 +250,7 @@ defmodule Flame.Accounts do
     # NOTE: local emulator expects local_id to be a list
     case do_request(client, "lookup", %{localId: List.wrap(local_id)}) do
       {:ok, %{"users" => [user]}} ->
-        {:ok, user}
+        User.new(user)
 
       {:ok, %{"kind" => "identitytoolkit#GetAccountInfoResponse"}} ->
         {:error, :user_not_found}

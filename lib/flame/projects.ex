@@ -75,11 +75,11 @@ defmodule Flame.Projects do
       )
       when is_binary(local_id) and is_integer(iat) do
     case Flame.Accounts.get_user_by_local_id(client, local_id) do
-      {:ok, %{"disabled" => true}} ->
+      {:ok, %Flame.User{disabled: true}} ->
         {:error, :user_disabled}
 
-      {:ok, %{"validSince" => earliest_iat}} ->
-        if iat >= String.to_integer(earliest_iat) do
+      {:ok, %Flame.User{valid_since: earliest_iat}} ->
+        if iat >= earliest_iat do
           {:ok, local_id, email}
         else
           {:error, :cookie_revoked}

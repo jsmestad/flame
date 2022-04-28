@@ -151,8 +151,8 @@ defmodule Flame.AccountsTest do
     setup [:seed_user]
 
     test "returns the user when there is a match", %{user: user, client: client} do
-      assert {:ok, result} = Accounts.find_user_by_email(client, user.email)
-      assert result["localId"] == user.local_id
+      assert {:ok, %Flame.User{} = result} = Accounts.find_user_by_email(client, user.email)
+      assert result.local_id == user.local_id
     end
 
     test "throws error when there is more than one match" do
@@ -176,8 +176,8 @@ defmodule Flame.AccountsTest do
     setup [:seed_user]
 
     test "returns the user when there is a match", %{user: user, client: client} do
-      assert {:ok, result} = Accounts.get_user_by_local_id(client, user.local_id)
-      assert result["localId"] == user.local_id
+      assert {:ok, %Flame.User{} = result} = Accounts.get_user_by_local_id(client, user.local_id)
+      assert result.local_id == user.local_id
     end
 
     test "throws error when there is more than one match" do

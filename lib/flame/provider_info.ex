@@ -55,7 +55,7 @@ defmodule Flame.ProviderInfo do
   def dump(%__MODULE__{} = data), do: {:ok, Map.from_struct(data)}
   def dump(_), do: :error
 
-  @type t :: %{
+  @type t :: %__MODULE__{
           provider_id: String.t(),
           display_name: String.t(),
           photo_url: String.t(),
