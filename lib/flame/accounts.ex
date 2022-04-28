@@ -151,10 +151,11 @@ defmodule Flame.Accounts do
   end
 
   @impl true
-  def fetch_providers(client, email) when is_binary(email) do
+  def fetch_providers(client, email, continue_uri \\ "https://localhost") when is_binary(email) do
     case do_request(client, "createAuthUri", %{
            identifier: email,
-           continueUri: "TODO"
+           # NOTE: continue_uri is not used. It avoids an error to supply some valid URI
+           continueUri: continue_uri
          }) do
       {:ok, %{"allProviders" => providers}} ->
         {:ok, providers}
