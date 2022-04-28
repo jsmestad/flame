@@ -1,0 +1,66 @@
+name: CI
+
+on: push
+
+env:
+  MIX_ENV: test
+  CI: true
+  GOOGLE_APPLICATION_CREDENTIALS_JSON: ${{ secrets.GOOGLE_APPLICATION_CREDENTIALS_JSON }}
+
+jobs:
+  test:
+    runs-on: ubuntu-20.04
+    name: OTP ${{matrix.otp}} / Elixir ${{matrix.elixir}}
+    strategy:
+      matrix:
+        otp: ["24.x"]
+        elixir: ["1.13.x"]
+        node: ["16.x"]
+
+    steps:
+      - name: Checkout codebase
+        uses: actions/checkout@v2
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: ${{ matrix.elixir }}
+          otp-version: ${{ matrix.otp }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: ${{ matrix.node }}
+
+      - name: Setup Firebase CLI
+        run: |
+          npm install -g firebase-tools
+
+      - uses: actions/cache@v3
+        with:
+          path: |
+            deps
+            _build
+          key: ${{ runner.os }}-mix-${{ hashFiles('**/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+
+      - name: Install Mix Dependencies
+        run: mix deps.get
+
+      - name: Lint
+        run: |
+          mix format --check-formatted
+          mix compile --warnings-as-errors --force
+          mix credo --strict
+
+      - name: Run Elixir Tests
+        run: firebase emulators:exec --only auth --token "${{ secrets.FIREBASE_TOKEN }}" "mix test"
+
+      - name: Typespecs
+        run: mix dialyzer --quiet
+        env:
+          MIX_ENV: dev
+
+      - name: Security
+        run: mix deps.audit
