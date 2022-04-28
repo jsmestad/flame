@@ -2,6 +2,8 @@
 
 An Elixir wrapper around the Firebase Authentication / Google Identity Platform APIs.
 
+As of 0.1.x, Flame only creates a minimal UserRecord with Firebase. Please open a PR if you'd like to add additional parameters to the `create_user` and `update_user` requests.
+
 ## Installation
 
 If [available in Hex](https://hex.pm/docs/publish), the package can be installed
@@ -17,7 +19,7 @@ end
 
 ```elixir
 config :flame, Flame,
-  credentials: "google-credentials.json" |> Path.expand() |> File.read!(),
+  credentials: System.get_env("GOOGLE_APPLICATION_CREDENTIALS_JSON"),
   project: "my-project-1234",
   issuer: "https://securetoken.google.com/my-project-1234",
   cookie_issuer: "https://session.firebase.google.com/my-project-1234"
