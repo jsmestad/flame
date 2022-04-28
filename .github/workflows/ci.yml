@@ -52,7 +52,6 @@ jobs:
         run: |
           mix format --check-formatted
           mix compile --warnings-as-errors --force
-          mix credo --strict
 
       - name: Run Elixir Tests
         run: firebase emulators:exec --only auth --token "${{ secrets.FIREBASE_TOKEN }}" "mix test"
