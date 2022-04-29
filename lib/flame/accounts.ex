@@ -124,6 +124,11 @@ defmodule Flame.Accounts do
     """
     @callback link_email_password(client, token, %{local_id: local_id, email: email}, pw) ::
                 :ok | {:error, :invalid_id_token | :weak_password}
+
+    @doc """
+    Revoke existing tokens by setting valid_since to now.
+    """
+    @callback revoke_refresh_tokens(client, local_id) :: {:ok, user} | {:error, :user_not_found}
   end
 
   def create_custom_token(local_id) when is_binary(local_id) do
@@ -309,6 +314,14 @@ defmodule Flame.Accounts do
            emailVerified: if(is_nil(verified), do: false, else: verified),
            email: email
          }) do
+      {:ok, params} -> User.new(params)
+      {:error, :user_not_found} -> {:error, :user_not_found}
+    end
+  end
+
+  @impl true
+  def revoke_refresh_tokens(client, local_id) do
+    case do_request(client, "update", %{localId: local_id, validSince: Epoch.now()}) do
       {:ok, params} -> User.new(params)
       {:error, :user_not_found} -> {:error, :user_not_found}
     end
