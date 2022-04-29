@@ -320,9 +320,15 @@ defmodule Flame.Accounts do
   end
 
   @impl true
-  def revoke_refresh_tokens(client, local_id) do
-    case do_request(client, "update", %{localId: local_id, validSince: Epoch.now()}) do
-      {:ok, params} -> User.new(params)
+  def revoke_refresh_tokens(client, local_id) when is_binary(local_id) do
+    with {:ok, token, _} <- sign_in(client, local_id),
+         {:ok, params} <-
+           do_request(client, "update", %{
+             idToken: token,
+             validSince: Epoch.now()
+           }) do
+      User.new(params)
+    else
       {:error, :user_not_found} -> {:error, :user_not_found}
     end
   end
