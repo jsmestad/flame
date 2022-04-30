@@ -16,7 +16,7 @@ defmodule Flame.Projects do
   Duration must be at least 5 minutes, up to 14 days.
   """
   @spec create_session_cookie(client, token, integer) ::
-          {:ok, cookie} | {:error, :invalid_id_token}
+          {:ok, cookie} | {:error, :invalid_id_token | :token_expired}
   def create_session_cookie(_, _, duration) when duration < 5 * 60 do
     {:error, :duration_too_short}
   end
@@ -33,6 +33,7 @@ defmodule Flame.Projects do
          }) do
       {:ok, %{"sessionCookie" => cookie}} -> {:ok, cookie}
       {:error, :invalid_id_token} = err -> err
+      {:error, :token_expired} = err -> err
     end
   end
 
@@ -100,6 +101,7 @@ defmodule Flame.Projects do
     reason =
       case message do
         "INVALID_ID_TOKEN" -> :invalid_id_token
+        "TOKEN_EXPIRED" -> :token_expired
       end
 
     {:error, reason}

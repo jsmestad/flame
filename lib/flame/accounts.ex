@@ -128,7 +128,7 @@ defmodule Flame.Accounts do
     @doc """
     Revoke existing tokens by setting valid_since to now.
     """
-    @callback revoke_refresh_tokens(client, local_id) :: {:ok, user} | {:error, :user_not_found}
+    @callback revoke_refresh_tokens(client, local_id) :: :ok | {:error, :user_not_found}
   end
 
   def create_custom_token(local_id) when is_binary(local_id) do
@@ -193,6 +193,9 @@ defmodule Flame.Accounts do
     else
       {:error, :invalid_custom_token} ->
         {:error, :invalid_custom_token}
+
+      err ->
+        err
     end
   end
 
@@ -322,12 +325,13 @@ defmodule Flame.Accounts do
   @impl true
   def revoke_refresh_tokens(client, local_id) when is_binary(local_id) do
     with {:ok, token, _} <- sign_in(client, local_id),
-         {:ok, params} <-
+         {:ok, %{"idToken" => _id_token, "localId" => ^local_id}} <-
            do_request(client, "update", %{
              idToken: token,
+             localId: local_id,
              validSince: Epoch.now()
            }) do
-      User.new(params)
+      :ok
     else
       {:error, :user_not_found} -> {:error, :user_not_found}
     end
