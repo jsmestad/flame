@@ -18,8 +18,9 @@ defmodule Flame.Application do
       {Finch,
        name: pool_name(),
        pools: %{
-         :default => [size: 50, count: 8],
-         "https://identitytoolkit.googleapis.com/v1/" => [size: 50, count: 8]
+         "https://identitytoolkit.googleapis.com/v1/" => [
+           protocol: :http2
+         ]
        }},
       goth_spec()
     ]
