@@ -45,7 +45,7 @@ defmodule Flame.Projects do
   @spec verify_session(cookie) ::
           {:ok, String.t(), String.t()} | {:error, String.t()}
   def verify_session(cookie_token) do
-    case ExFirebaseAuth.Token.verify_cookie(cookie_token) do
+    case ExFirebaseAuth.Cookie.verify_cookie(cookie_token) do
       {:ok, user_id, %{fields: %{"email" => email}}} ->
         {:ok, user_id, email}
 
@@ -65,10 +65,10 @@ defmodule Flame.Projects do
   def verify_session(cookie_token, opts) do
     if Keyword.get(opts, :verify, true) do
       cookie_token
-      |> ExFirebaseAuth.Token.verify_cookie()
+      |> ExFirebaseAuth.Cookie.verify_cookie()
       |> check_revoked()
     else
-      case ExFirebaseAuth.Token.verify_cookie(cookie_token) do
+      case ExFirebaseAuth.Cookie.verify_cookie(cookie_token) do
         {:ok, user_id, %{fields: %{"email" => email}}} ->
           {:ok, user_id, email}
 
