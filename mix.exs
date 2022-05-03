@@ -39,7 +39,8 @@ defmodule Flame.MixProject do
       {:finch, "~> 0.11"},
       {:tesla, "~> 1.4"},
       {:ex_firebase_auth, "~> 0.6.0",
-       git: "https://github.com/jsmestad/ExFirebaseAuth.git", branch: "cookie-verification"},
+       git: "https://github.com/jsmestad/ExFirebaseAuth.git",
+       ref: "4a981ee10ccc92b9e50ed465d600c198642468c5"},
       {:ecto, "~> 3.8"},
       {:jason, "~> 1.3"},
 
