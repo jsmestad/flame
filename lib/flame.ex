@@ -15,6 +15,15 @@ defmodule Flame do
   def get_env do
     Application.get_env(:flame, Flame, project: nil, credentials: nil)
     |> Keyword.put_new(:adapter, {Tesla.Adapter.Finch, name: Flame.Application.pool_name()})
+    |> Keyword.put_new(:client, {Flame.Client, :new, []})
+  end
+
+  @spec client :: Tesla.Client.t() | no_return
+  def client do
+    case get_env() |> Keyword.get(:client) do
+      {mod, fun, args} -> Kernel.apply(mod, fun, args)
+      _ -> raise "Invalid :client configuration"
+    end
   end
 
   @spec project :: String.t() | no_return

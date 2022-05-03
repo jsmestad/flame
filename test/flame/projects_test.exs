@@ -3,12 +3,11 @@ defmodule Flame.ProjectsTest do
 
   alias Flame.Projects
 
-  @emulator_url "http://localhost:9099/identitytoolkit.googleapis.com/v1/"
+  @existing_config Application.compile_env(:flame, Flame)
   @duration 60 * 60 * 24 * 7
 
   setup do
     %{
-      client: Flame.Client.new(@emulator_url),
       password: "secret-password"
     }
   end
@@ -16,24 +15,24 @@ defmodule Flame.ProjectsTest do
   setup [:seed_user]
 
   describe "create_session_cookie/3" do
-    test "fails when duration is under 5 minutes", %{client: client} do
+    test "fails when duration is under 5 minutes" do
       almost_5m = 60 * 5 - 1
 
-      assert Projects.create_session_cookie(client, "", almost_5m) ==
+      assert Projects.create_session_cookie("", almost_5m) ==
                {:error, :duration_too_short}
     end
 
-    test "fails when duration is over 14 days", %{client: client} do
+    test "fails when duration is over 14 days" do
       over_14d = 60 * 60 * 24 * 14 + 1
 
-      assert Projects.create_session_cookie(client, "", over_14d) ==
+      assert Projects.create_session_cookie("", over_14d) ==
                {:error, :duration_too_long}
     end
 
-    test "exchanges id token for a cookie session", %{client: client, user: user} do
-      {:ok, token, _} = Flame.Accounts.sign_in(client, user.local_id)
+    test "exchanges id token for a cookie session", %{user: user} do
+      {:ok, token, _} = Flame.Accounts.sign_in(user.local_id)
 
-      assert {:ok, _} = Projects.create_session_cookie(client, token, @duration)
+      assert {:ok, _} = Projects.create_session_cookie(token, @duration)
     end
   end
 
@@ -64,12 +63,19 @@ defmodule Flame.ProjectsTest do
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       data = %{users: [user_fixture()]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert {:ok, _, _} = Projects.verify_session(cookie, client)
+      assert {:ok, _, _} = Projects.verify_session(cookie, verify: true)
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
     test "fails when validSince is after iat of cookie" do
@@ -84,19 +90,26 @@ defmodule Flame.ProjectsTest do
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       data = %{users: [user_fixture(%{"validSince" => to_string(now + 1)})]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert Projects.verify_session(cookie, client) == {:error, :cookie_revoked}
+      assert Projects.verify_session(cookie, verify: true) == {:error, :cookie_revoked}
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
-    test "fails on expired tokens", %{client: client} do
+    test "fails on expired tokens" do
       mock_cookie =
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{"email" => "foo@example.com", "exp" => 1})
 
-      assert Projects.verify_session(mock_cookie, client) == {:error, "Expired JWT"}
+      assert Projects.verify_session(mock_cookie, verify: true) == {:error, "Expired JWT"}
     end
 
     test "fails when user is disabled" do
@@ -111,22 +124,29 @@ defmodule Flame.ProjectsTest do
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       data = %{users: [user_fixture(%{"disabled" => true})]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert Projects.verify_session(cookie, client) == {:error, :user_disabled}
+      assert Projects.verify_session(cookie, verify: true) == {:error, :user_disabled}
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
-    test "fails when user is unknown", %{client: client} do
+    test "fails when user is unknown" do
       mock_cookie =
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
           "iat" => Epoch.now()
         })
 
-      assert Projects.verify_session(mock_cookie, client) == {:error, :user_not_found}
+      assert Projects.verify_session(mock_cookie, verify: true) == {:error, :user_not_found}
     end
   end
 

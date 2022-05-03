@@ -3,11 +3,10 @@ defmodule Flame.AccountsTest do
 
   alias Flame.Accounts
 
-  @emulator_url "http://localhost:9099/identitytoolkit.googleapis.com/v1/"
+  @existing_config Application.compile_env(:flame, Flame)
 
   setup do
     %{
-      client: Flame.Client.new(@emulator_url),
       password: "secret-password"
     }
   end
@@ -26,97 +25,97 @@ defmodule Flame.AccountsTest do
   describe "fetch_providers/2" do
     setup [:seed_user]
 
-    test "lists the providers for the user", %{client: client} do
+    test "lists the providers for the user" do
       # NOTE email matches the key below
       user = build(:user, email: "yoav@cloudinary.com", password: "secret-password")
 
-      assert Accounts.fetch_providers(client, user.email) == {:ok, ["password"]}
-      assert {:ok, _, _} = Accounts.sign_in(client, user.email, "secret-password")
+      assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
+      assert {:ok, _, _} = Accounts.sign_in(user.email, "secret-password")
 
       %{status: 200} =
-        Tesla.post!(client, "/accounts:signInWithIdp", %{
+        Tesla.post!(Flame.client(), "/accounts:signInWithIdp", %{
           requestUri: "http://localhost",
           postBody:
             "id_token=eyJhbGciOiJSUzI1NiIsImtpZCI6ImNjM2Y0ZThiMmYxZDAyZjBlYTRiMWJkZGU1NWFkZDhiMDhiYzUzODYiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiWW9hdiBOaXJhbiIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS0vQU9oMTRHajczX2tnUmQxVnBTV3Y2RzRrOU41ZHZLNkRESjJlaGZrUUhPN2w9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vbWVkaWEtZmxvdy1iMzdkMSIsImF1ZCI6Im1lZGlhLWZsb3ctYjM3ZDEiLCJhdXRoX3RpbWUiOjE2MjAyMTExOTMsInVzZXJfaWQiOiJFa2lhRUc0NXFoTU9Jbk5VT01IbHJOYVpuR24yIiwic3ViIjoiRWtpYUVHNDVxaE1PSW5OVU9NSGxyTmFabkduMiIsImlhdCI6MTYyMDIxMTE5MywiZXhwIjoxNjIwMjE0NzkzLCJlbWFpbCI6InlvYXZAY2xvdWRpbmFyeS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJnb29nbGUuY29tIjpbIjEwNzEwMTUyNzU2NTgzOTU0Nzg4MyJdLCJlbWFpbCI6WyJ5b2F2QGNsb3VkaW5hcnkuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoiZ29vZ2xlLmNvbSJ9fQ.grIXaGN9-Ue92EZqN7NNgoUo3vQF8zxApvHZ6IvucWIQOJKDMJnSxEvWGH6P7vg4ETQldgg1VtLNC-eRhE_417OJYKkqpTutsT6mihUgiAHmFoVWcrcgDFn0PSi0eznqFiYq36OpAJQo8CiaMIrFeyqrhe9qQUdhKvz-1XzksbsKc1gna-6yVcdaQtcEfsmmrMJnfK9MQ1MsE2_F3ooVzV5Ym1b_6cFNAilBPHThIVn7kZ64kTBqTOUon06PV3uD_Svv3X3B971cW9oXSnZGZDEJs6fP0vHyKhakFrNVNwcgbhPnJ7WIkNjh0WuG3yYMSNn8LauZMllHP2iV3nICAA&providerId=google.com",
           returnSecureToken: true
         })
 
-      assert Accounts.fetch_providers(client, user.email) == {:ok, ["password", "google.com"]}
+      assert Accounts.fetch_providers(user.email) == {:ok, ["password", "google.com"]}
     end
 
-    test "lists an empty list when the user is not found", %{client: client} do
+    test "lists an empty list when the user is not found" do
       user = build(:user, skip_firebase: true)
-      assert Accounts.fetch_providers(client, user.email) == {:ok, []}
+      assert Accounts.fetch_providers(user.email) == {:ok, []}
     end
   end
 
   describe "unlink_providers/3" do
     setup [:seed_user]
 
-    test "unlinks the providers for the user", %{client: client, user: user} do
-      assert Accounts.fetch_providers(client, user.email) == {:ok, ["password"]}
-      assert Accounts.unlink_providers(client, user.local_id, ["password"]) == {:ok, []}
+    test "unlinks the providers for the user", %{user: user} do
+      assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
+      assert Accounts.unlink_providers(user.local_id, ["password"]) == {:ok, []}
     end
 
-    test "unlinks an idP provider", %{client: client} do
+    test "unlinks an idP provider" do
       # NOTE email matches the key below
       user = build(:user, email: "yoav@cloudinary.com", password: "secret-password")
 
-      assert Accounts.fetch_providers(client, user.email) == {:ok, ["password"]}
-      assert {:ok, _, _} = Accounts.sign_in(client, user.email, "secret-password")
+      assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
+      assert {:ok, _, _} = Accounts.sign_in(user.email, "secret-password")
 
       %{status: 200} =
-        Tesla.post!(client, "/accounts:signInWithIdp", %{
+        Tesla.post!(Flame.client(), "/accounts:signInWithIdp", %{
           requestUri: "http://localhost",
           postBody:
             "id_token=eyJhbGciOiJSUzI1NiIsImtpZCI6ImNjM2Y0ZThiMmYxZDAyZjBlYTRiMWJkZGU1NWFkZDhiMDhiYzUzODYiLCJ0eXAiOiJKV1QifQ.eyJuYW1lIjoiWW9hdiBOaXJhbiIsInBpY3R1cmUiOiJodHRwczovL2xoMy5nb29nbGV1c2VyY29udGVudC5jb20vYS0vQU9oMTRHajczX2tnUmQxVnBTV3Y2RzRrOU41ZHZLNkRESjJlaGZrUUhPN2w9czk2LWMiLCJpc3MiOiJodHRwczovL3NlY3VyZXRva2VuLmdvb2dsZS5jb20vbWVkaWEtZmxvdy1iMzdkMSIsImF1ZCI6Im1lZGlhLWZsb3ctYjM3ZDEiLCJhdXRoX3RpbWUiOjE2MjAyMTExOTMsInVzZXJfaWQiOiJFa2lhRUc0NXFoTU9Jbk5VT01IbHJOYVpuR24yIiwic3ViIjoiRWtpYUVHNDVxaE1PSW5OVU9NSGxyTmFabkduMiIsImlhdCI6MTYyMDIxMTE5MywiZXhwIjoxNjIwMjE0NzkzLCJlbWFpbCI6InlvYXZAY2xvdWRpbmFyeS5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwiZmlyZWJhc2UiOnsiaWRlbnRpdGllcyI6eyJnb29nbGUuY29tIjpbIjEwNzEwMTUyNzU2NTgzOTU0Nzg4MyJdLCJlbWFpbCI6WyJ5b2F2QGNsb3VkaW5hcnkuY29tIl19LCJzaWduX2luX3Byb3ZpZGVyIjoiZ29vZ2xlLmNvbSJ9fQ.grIXaGN9-Ue92EZqN7NNgoUo3vQF8zxApvHZ6IvucWIQOJKDMJnSxEvWGH6P7vg4ETQldgg1VtLNC-eRhE_417OJYKkqpTutsT6mihUgiAHmFoVWcrcgDFn0PSi0eznqFiYq36OpAJQo8CiaMIrFeyqrhe9qQUdhKvz-1XzksbsKc1gna-6yVcdaQtcEfsmmrMJnfK9MQ1MsE2_F3ooVzV5Ym1b_6cFNAilBPHThIVn7kZ64kTBqTOUon06PV3uD_Svv3X3B971cW9oXSnZGZDEJs6fP0vHyKhakFrNVNwcgbhPnJ7WIkNjh0WuG3yYMSNn8LauZMllHP2iV3nICAA&providerId=google.com",
           returnSecureToken: true
         })
 
-      assert Accounts.unlink_providers(client, user.local_id, ["google.com"]) ==
+      assert Accounts.unlink_providers(user.local_id, ["google.com"]) ==
                {:ok, ["password"]}
     end
 
-    test "removing a provider that does not exist", %{client: client, user: user} do
-      assert Accounts.unlink_providers(client, user.local_id, ["google.com"]) ==
+    test "removing a provider that does not exist", %{user: user} do
+      assert Accounts.unlink_providers(user.local_id, ["google.com"]) ==
                {:ok, ["password"]}
     end
 
-    test "errors when user is unknown", %{client: client} do
-      assert Accounts.unlink_providers(client, "unknown", ["google.com"]) ==
+    test "errors when user is unknown" do
+      assert Accounts.unlink_providers("unknown", ["google.com"]) ==
                {:error, :user_not_found}
     end
   end
 
   describe "create_user/3" do
-    test "creates a user", %{client: client} do
+    test "creates a user" do
       user = build(:user, skip_firebase: true)
 
-      assert {:ok, %{local_id: _}} = Accounts.create_user(client, user, "secret")
+      assert {:ok, %{local_id: _}} = Accounts.create_user(user, "secret")
     end
 
-    test "fails when user email is duplicated", %{client: client} do
+    test "fails when user email is duplicated" do
       user = build(:user, skip_firebase: true)
-      {:ok, _} = Accounts.create_user(client, user, "secret")
+      {:ok, _} = Accounts.create_user(user, "secret")
 
-      assert Accounts.create_user(client, user, "secret") == {:error, :email_exists}
+      assert Accounts.create_user(user, "secret") == {:error, :email_exists}
     end
   end
 
   describe "sign_in/3" do
     setup [:seed_user]
 
-    test "returns a secure token", %{client: client, user: user, password: password} do
-      assert {:ok, _, _} = Accounts.sign_in(client, user.email, password)
+    test "returns a secure token", %{user: user, password: password} do
+      assert {:ok, _, _} = Accounts.sign_in(user.email, password)
     end
 
-    test "returns error with incorrect password", %{client: client, user: user} do
-      assert Accounts.sign_in(client, user.email, "bad-password") ==
+    test "returns error with incorrect password", %{user: user} do
+      assert Accounts.sign_in(user.email, "bad-password") ==
                {:error, :invalid_credentials}
     end
 
-    test "returns error with unknown user login", %{client: client} do
-      assert Accounts.sign_in(client, "foo", "bar") == {:error, :invalid_credentials}
+    test "returns error with unknown user login" do
+      assert Accounts.sign_in("foo", "bar") == {:error, :invalid_credentials}
     end
   end
 
@@ -124,25 +123,32 @@ defmodule Flame.AccountsTest do
     setup [:seed_user]
 
     # NOTE: this test does not work against Flame Emulator
-    # test "returns the user when there is a match", %{user: user, client: client, password: pw} do
-    #   {:ok, token, _} = Accounts.sign_in(client, user.email, pw)
-    #   assert {:ok, _} = Accounts.find_user_by_email(client, user.email)
-    #   assert {:ok, result} = Accounts.get_user(client, token)
+    # test "returns the user when there is a match", %{user: user, client:  password: pw} do
+    #   {:ok, token, _} = Accounts.sign_in( user.email, pw)
+    #   assert {:ok, _} = Accounts.find_user_by_email( user.email)
+    #   assert {:ok, result} = Accounts.get_user( token)
     #   assert result["localId"] == user.local_id
     # end
 
     test "returns error when there is more than one match" do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       data = %{users: [user_fixture(), user_fixture()]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert_raise CaseClauseError, fn -> Accounts.get_user(client, "myIdpToken") end
+      assert_raise CaseClauseError, fn -> Accounts.get_user("myIdpToken") end
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
-    test "returns error when the token is invalid", %{client: client} do
-      assert Accounts.get_user(client, "invalid_token") ==
+    test "returns error when the token is invalid" do
+      assert Accounts.get_user("invalid_token") ==
                {:error, :user_not_found}
     end
   end
@@ -150,24 +156,31 @@ defmodule Flame.AccountsTest do
   describe "find_user_by_email/2" do
     setup [:seed_user]
 
-    test "returns the user when there is a match", %{user: user, client: client} do
-      assert {:ok, %Flame.User{} = result} = Accounts.find_user_by_email(client, user.email)
+    test "returns the user when there is a match", %{user: user} do
+      assert {:ok, %Flame.User{} = result} = Accounts.find_user_by_email(user.email)
       assert result.local_id == user.local_id
     end
 
     test "throws error when there is more than one match" do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       data = %{users: [user_fixture(), user_fixture()]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert Accounts.find_user_by_email(client, "multiple-matches@example.com") ==
+      assert Accounts.find_user_by_email("multiple-matches@example.com") ==
                {:error, :multiple_matches}
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
-    test "returns error when no user matches", %{client: client} do
-      assert Accounts.find_user_by_email(client, "missing-user@example.com") ==
+    test "returns error when no user matches" do
+      assert Accounts.find_user_by_email("missing-user@example.com") ==
                {:error, :user_not_found}
     end
   end
@@ -175,25 +188,32 @@ defmodule Flame.AccountsTest do
   describe "get_user_by_local_id/2" do
     setup [:seed_user]
 
-    test "returns the user when there is a match", %{user: user, client: client} do
-      assert {:ok, %Flame.User{} = result} = Accounts.get_user_by_local_id(client, user.local_id)
+    test "returns the user when there is a match", %{user: user} do
+      assert {:ok, %Flame.User{} = result} = Accounts.get_user_by_local_id(user.local_id)
       assert result.local_id == user.local_id
     end
 
     test "throws error when there is more than one match" do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       data = %{users: [user_fixture(), user_fixture()]}
       mock_response(bypass, "lookup", data, 200)
 
       assert_raise CaseClauseError, fn ->
-        Accounts.get_user_by_local_id(client, "multi")
+        Accounts.get_user_by_local_id("multi")
       end
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
-    test "returns error when no user matches", %{client: client} do
-      assert Accounts.get_user_by_local_id(client, "unknown-id") ==
+    test "returns error when no user matches" do
+      assert Accounts.get_user_by_local_id("unknown-id") ==
                {:error, :user_not_found}
     end
   end
@@ -201,34 +221,33 @@ defmodule Flame.AccountsTest do
   describe "update_user/2" do
     setup [:seed_user]
 
-    test "updates the users name", %{client: client, user: user} do
-      assert {:ok, user} = Accounts.update_user(client, %{user | display_name: "Updated name"})
+    test "updates the users name", %{user: user} do
+      assert {:ok, user} = Accounts.update_user(%{user | display_name: "Updated name"})
       assert user.display_name == "Updated name"
     end
 
-    test "fails when user is missing", %{client: client} do
+    test "fails when user is missing" do
       user = build(:user, skip_firebase: true, local_id: "unknown")
-      assert {:error, :user_not_found} == Accounts.update_user(client, user)
+      assert {:error, :user_not_found} == Accounts.update_user(user)
     end
   end
 
   describe "update_user_password/3" do
     setup [:seed_user]
 
-    test "updates the users password", %{client: client, user: user} do
-      assert Accounts.sign_in(client, user.email, "new-password") ==
+    test "updates the users password", %{user: user} do
+      assert Accounts.sign_in(user.email, "new-password") ==
                {:error, :invalid_credentials}
 
-      assert {:ok, %Flame.User{}} =
-               Accounts.update_user_password(client, user.local_id, "new-password")
+      assert {:ok, %Flame.User{}} = Accounts.update_user_password(user.local_id, "new-password")
 
-      assert {:ok, _, _} = Accounts.sign_in(client, user.email, "new-password")
+      assert {:ok, _, _} = Accounts.sign_in(user.email, "new-password")
     end
 
-    test "fails when user is missing", %{client: client} do
+    test "fails when user is missing" do
       user = build(:user, skip_firebase: true, local_id: "unknown")
 
-      assert Accounts.update_user_password(client, user.local_id, "new-password") ==
+      assert Accounts.update_user_password(user.local_id, "new-password") ==
                {:error, :user_not_found}
     end
   end
@@ -236,25 +255,25 @@ defmodule Flame.AccountsTest do
   describe "delete_user/2" do
     setup [:seed_user]
 
-    test "successfully removes the user", %{client: client, user: user} do
-      assert {:ok, %{local_id: nil}} = Accounts.delete_user(client, user.local_id)
+    test "successfully removes the user", %{user: user} do
+      assert {:ok, %{local_id: nil}} = Accounts.delete_user(user.local_id)
     end
 
-    test "fails to delete a missing user", %{client: client} do
+    test "fails to delete a missing user" do
       user = build(:user, skip_firebase: true, local_id: "a9999")
-      assert Accounts.delete_user(client, user.local_id) == {:error, :user_not_found}
+      assert Accounts.delete_user(user.local_id) == {:error, :user_not_found}
     end
   end
 
   describe "send_password_reset/2" do
     setup [:seed_user]
 
-    test "sends a password reset email", %{client: client, user: user} do
-      assert Accounts.send_password_reset(client, user.email) == :ok
+    test "sends a password reset email", %{user: user} do
+      assert Accounts.send_password_reset(user.email) == :ok
     end
 
-    test "fails when email is missing", %{client: client} do
-      assert Accounts.send_password_reset(client, "missing-user@example.com") ==
+    test "fails when email is missing" do
+      assert Accounts.send_password_reset("missing-user@example.com") ==
                {:error, :email_not_found}
     end
   end
@@ -264,7 +283,12 @@ defmodule Flame.AccountsTest do
 
     test "sends a password reset email" do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       mock_response(
         bypass,
@@ -276,12 +300,19 @@ defmodule Flame.AccountsTest do
         200
       )
 
-      assert Accounts.confirm_password_reset(client, "correctCode", "newPassword") == :ok
+      assert Accounts.confirm_password_reset("correctCode", "newPassword") == :ok
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
     test "fails when expired code is used" do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       mock_response(
         bypass,
@@ -290,12 +321,14 @@ defmodule Flame.AccountsTest do
         400
       )
 
-      assert Accounts.confirm_password_reset(client, "wrongCode", "newPassword") ==
+      assert Accounts.confirm_password_reset("wrongCode", "newPassword") ==
                {:error, :expired_oob_code}
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
-    test "fails when invalid code is used", %{client: client} do
-      assert Accounts.confirm_password_reset(client, "wrongCode", "newPassword") ==
+    test "fails when invalid code is used" do
+      assert Accounts.confirm_password_reset("wrongCode", "newPassword") ==
                {:error, :invalid_oob_code}
     end
   end
@@ -306,7 +339,12 @@ defmodule Flame.AccountsTest do
     # NOTE: uses bypass instead of emulator due to 500 error
     test "sends a confirmation email", %{user: user} do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       mock_response(
         bypass,
@@ -317,12 +355,19 @@ defmodule Flame.AccountsTest do
         200
       )
 
-      assert Accounts.send_confirmation_email(client, user.email) == :ok
+      assert Accounts.send_confirmation_email(user.email) == :ok
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
 
     test "fails when user is missing" do
       bypass = Bypass.open(port: 3000)
-      client = Flame.Client.new("http://localhost:3000")
+
+      Application.put_env(
+        :flame,
+        Flame,
+        Keyword.put(@existing_config, :client, {Flame.Client, :new, ["http://localhost:3000"]})
+      )
 
       mock_response(
         bypass,
@@ -333,8 +378,10 @@ defmodule Flame.AccountsTest do
 
       # user = build(:user, skip_firebase: true, local_id: "9999")
 
-      assert Accounts.send_confirmation_email(client, "unknown@example.com") ==
+      assert Accounts.send_confirmation_email("unknown@example.com") ==
                {:error, :user_not_found}
+    after
+      Application.put_env(:flame, Flame, @existing_config)
     end
   end
 

@@ -53,7 +53,7 @@ defmodule Flame.TestCase do
     if Map.get(attrs, :skip_firebase, false) do
       struct(Flame.User, attrs)
     else
-      {:ok, user} = Flame.Accounts.create_user(Flame.Client.new(), attrs, attrs[:password])
+      {:ok, user} = Flame.Accounts.create_user(attrs, attrs[:password])
       user
     end
 

@@ -3,17 +3,16 @@ defmodule Flame.ActionLinks do
   https://firebase.google.com/docs/auth/admin/email-action-links
   """
 
-  @typep client :: Tesla.Client.t()
   @type url :: String.t()
   @type email :: String.t()
   @type local_id :: String.t()
 
-  @spec get_confirmation_link(client, local_id, url) :: {:ok, url} | {:error, :user_not_found}
-  def get_confirmation_link(client, local_id, complete_url)
+  @spec get_confirmation_link(local_id, url) :: {:ok, url} | {:error, :user_not_found}
+  def get_confirmation_link(local_id, complete_url)
       when is_binary(local_id) and is_binary(complete_url) do
     with {:ok, id_token} <- Flame.Accounts.create_custom_token(local_id),
          {:ok, %{"oobLink" => link}} <-
-           do_request(client, %{
+           do_request(%{
              requestType: "VERIFY_EMAIL",
              continueUrl: complete_url,
              idToken: id_token,
@@ -25,10 +24,10 @@ defmodule Flame.ActionLinks do
     end
   end
 
-  @spec get_password_reset_link(client, email, url) :: {:ok, url} | {:error, :user_not_found}
-  def get_password_reset_link(client, email, complete_url)
+  @spec get_password_reset_link(email, url) :: {:ok, url} | {:error, :user_not_found}
+  def get_password_reset_link(email, complete_url)
       when is_binary(email) and is_binary(complete_url) do
-    case do_request(client, %{
+    case do_request(%{
            continueUrl: complete_url,
            requestType: "PASSWORD_RESET",
            email: email,
@@ -42,10 +41,10 @@ defmodule Flame.ActionLinks do
   @doc """
   https://firebase.google.com/docs/auth/web/email-link-auth
   """
-  @spec get_email_signin_link(client, email, url) :: {:ok, url} | {:error, :user_not_found}
-  def get_email_signin_link(client, email, complete_url)
+  @spec get_email_signin_link(email, url) :: {:ok, url} | {:error, :user_not_found}
+  def get_email_signin_link(email, complete_url)
       when is_binary(email) and is_binary(complete_url) do
-    case do_request(client, %{
+    case do_request(%{
            continueUrl: complete_url,
            requestType: "EMAIL_SIGNIN",
            email: email,
@@ -56,8 +55,8 @@ defmodule Flame.ActionLinks do
     end
   end
 
-  defp do_request(client, data) do
-    client
+  defp do_request(data) do
+    Flame.client()
     |> Tesla.post!("accounts:sendOobCode", data)
     |> handle_response()
   end
