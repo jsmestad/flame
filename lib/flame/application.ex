@@ -22,7 +22,7 @@ defmodule Flame.Application do
   end
 
   @spec pool_name :: atom()
-  def pool_name, do: Flame.Finch
+  def pool_name, do: Goth.Finch
 
   @spec service_name :: atom()
   def service_name, do: Flame.TokenService
