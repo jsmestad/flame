@@ -15,13 +15,6 @@ defmodule Flame.Application do
     Application.put_env(:ex_firebase_auth, :cookie_issuer, cookie_issuer)
 
     children = [
-      {Finch,
-       name: pool_name(),
-       pools: %{
-         "https://identitytoolkit.googleapis.com/v1/" => [
-           protocol: :http2
-         ]
-       }},
       goth_spec()
     ]
 
@@ -50,10 +43,7 @@ defmodule Flame.Application do
              ]
            ]}
 
-        {Goth,
-         name: name,
-         source: source,
-         http_client: {Flame.Extensions.Goth.FinchClient, name: Flame.Application.pool_name()}}
+        {Goth, name: name, source: source, http_client: {:finch, []}}
     end
   end
 end

@@ -35,7 +35,7 @@ defmodule Flame.MixProject do
   defp deps do
     [
       {:epoch, "~> 1.2"},
-      {:goth, ">= 1.3.0-rc.3"},
+      {:goth, ">= 1.3.1"},
       {:finch, "~> 0.11"},
       {:tesla, "~> 1.4"},
       {:ex_firebase_auth, "~> 0.6.0",
@@ -55,7 +55,7 @@ defmodule Flame.MixProject do
       {:ex_doc, "~> 0.28", only: :dev},
 
       # Lint
-      {:mix_audit, "~> 1.0", only: [:dev, :test], runtime: false},
+      {:mix_audit, "~> 2.0", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false}
     ]
   end
