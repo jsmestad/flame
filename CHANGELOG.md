@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+- Change API to return `{:ok, Flame.Token.t()}` instead of `{:ok, String.t(), String.t()}`
+
 ## [0.1.0] - 2022-04-28
 
 - Initial Release
