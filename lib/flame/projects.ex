@@ -3,8 +3,8 @@ defmodule Flame.Projects do
   https://cloud.google.com/identity-platform/docs/reference/rest/v1/projects/
   """
 
-  @type cookie :: String.t()
-  @type token :: Flame.Accounts.Api.token()
+  @type id_token :: Flame.IdToken.t()
+  @type cookie :: Flame.SessionCookie.t()
   @type code :: String.t()
   @type provider :: String.t()
   @type local_id :: String.t()
@@ -14,8 +14,9 @@ defmodule Flame.Projects do
 
   Duration must be at least 5 minutes, up to 14 days.
   """
-  @spec create_session_cookie(token, integer) ::
-          {:ok, Flame.Token.t()} | {:error, :invalid_id_token | :token_expired | :user_not_found}
+  @spec create_session_cookie(id_token, integer) ::
+          {:ok, cookie}
+          | {:error, :invalid_id_token | :token_expired | :user_not_found}
   def create_session_cookie(_, duration) when duration < 5 * 60 do
     {:error, :duration_too_short}
   end
@@ -24,13 +25,12 @@ defmodule Flame.Projects do
     {:error, :duration_too_long}
   end
 
-  def create_session_cookie(id_token, duration)
-      when is_binary(id_token) and is_integer(duration) do
+  def create_session_cookie(%Flame.IdToken{} = id_token, duration) when is_integer(duration) do
     case do_request("createSessionCookie", %{
-           idToken: id_token,
+           idToken: id_token.value,
            duration: to_string(duration)
          }) do
-      {:ok, %{"sessionCookie" => cookie}} -> {:ok, Flame.Token.new(cookie)}
+      {:ok, %{"sessionCookie" => cookie}} -> {:ok, Flame.SessionCookie.new(cookie)}
       {:error, :invalid_id_token} = err -> err
       {:error, :token_expired} = err -> err
       {:error, :user_not_found} = err -> err
@@ -43,9 +43,9 @@ defmodule Flame.Projects do
   It does not check for revoked or disabled users, use verify_session/2 for that.
   """
   @spec verify_session(cookie) ::
-          {:ok, Flame.Token.t()} | {:error, String.t()}
-  def verify_session(cookie_token) do
-    Flame.Token.verify(:cookie, cookie_token)
+          {:ok, Flame.SessionCookie.t()} | {:error, String.t()}
+  def verify_session(%Flame.SessionCookie{} = cookie) do
+    Flame.SessionCookie.verify(cookie)
   end
 
   @doc """
@@ -55,19 +55,19 @@ defmodule Flame.Projects do
   This was reverse-engineered from the Node.JS and Go Flame SDK.
   """
   @spec verify_session(cookie, opts :: [verify: boolean]) ::
-          {:ok, Flame.Token.t()} | {:error, :cookie_revoked | :user_not_found}
-  def verify_session(cookie_token, opts) do
+          {:ok, cookie} | {:error, :cookie_revoked | :user_not_found}
+  def verify_session(%Flame.SessionCookie{} = cookie, opts) do
     if Keyword.get(opts, :verify, true) do
-      Flame.Token.verify(:cookie, cookie_token)
+      Flame.SessionCookie.verify(cookie)
       |> check_revoked()
     else
-      Flame.Token.verify(:cookie, cookie_token)
+      Flame.SessionCookie.verify(cookie)
     end
   end
 
   def check_revoked({:error, _} = result), do: result
 
-  def check_revoked({:ok, %Flame.Token{} = token}) do
+  def check_revoked({:ok, %Flame.SessionCookie{} = token}) do
     case Flame.Accounts.get_user_by_local_id(token.sub) do
       {:ok, %Flame.User{disabled: true}} ->
         {:error, :user_disabled}

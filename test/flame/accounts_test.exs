@@ -30,7 +30,7 @@ defmodule Flame.AccountsTest do
       user = build(:user, email: "yoav@cloudinary.com", password: "secret-password")
 
       assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
-      assert {:ok, %Flame.Token{}} = Accounts.sign_in(user.email, "secret-password")
+      assert {:ok, %Flame.IdToken{}} = Accounts.sign_in(user.email, "secret-password")
 
       %{status: 200} =
         Tesla.post!(Flame.client(), "/accounts:signInWithIdp", %{
@@ -62,7 +62,7 @@ defmodule Flame.AccountsTest do
       user = build(:user, email: "yoav@cloudinary.com", password: "secret-password")
 
       assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
-      assert {:ok, %Flame.Token{}} = Accounts.sign_in(user.email, "secret-password")
+      assert {:ok, %Flame.IdToken{}} = Accounts.sign_in(user.email, "secret-password")
 
       %{status: 200} =
         Tesla.post!(Flame.client(), "/accounts:signInWithIdp", %{
@@ -108,7 +108,7 @@ defmodule Flame.AccountsTest do
     test "returns a secure token", %{user: user, password: password} do
       expected_id = user.local_id
 
-      assert {:ok, %Flame.Token{value: _, sub: ^expected_id}} =
+      assert {:ok, %Flame.IdToken{value: _, sub: ^expected_id}} =
                Accounts.sign_in(user.email, password)
     end
 
@@ -244,7 +244,7 @@ defmodule Flame.AccountsTest do
 
       assert {:ok, %Flame.User{}} = Accounts.update_user_password(user.local_id, "new-password")
 
-      assert {:ok, %Flame.Token{}} = Accounts.sign_in(user.email, "new-password")
+      assert {:ok, %Flame.IdToken{}} = Accounts.sign_in(user.email, "new-password")
     end
 
     test "fails when user is missing" do
@@ -399,18 +399,24 @@ defmodule Flame.AccountsTest do
           "exp" => now + 10,
           "auth_time" => now - 10
         })
+        |> Flame.IdToken.new()
 
-      assert {:ok, %Flame.Token{sub: "my_user_id", email: "foo@bar.example"}} =
+      assert {:ok, %Flame.IdToken{sub: "my_user_id", email: "foo@bar.example"}} =
                Accounts.verify_session(token)
     end
 
     test "fails on expired JWT" do
       sub = Enum.random(?a..?z)
 
-      time_in_past = DateTime.utc_now() |> DateTime.add(-60, :second) |> DateTime.to_unix()
-      claims = %{"exp" => time_in_past}
+      claims = %{
+        "exp" => Epoch.now() - 5,
+        "iat" => Epoch.now() - 10,
+        "auth_time" => Epoch.now() - 10
+      }
 
-      valid_token = ExFirebaseAuth.Mock.generate_token(sub, claims)
+      valid_token =
+        ExFirebaseAuth.Mock.generate_token(sub, claims)
+        |> Flame.IdToken.new()
 
       assert {:error, "Expired JWT"} = Accounts.verify_session(valid_token)
     end
@@ -431,11 +437,15 @@ defmodule Flame.AccountsTest do
           },
           %{
             "sub" => sub,
-            "iss" => "issuer"
+            "iss" => "issuer",
+            "iat" => Epoch.now(),
+            "exp" => Epoch.now() + 10,
+            "auth_time" => Epoch.now()
           }
         )
         |> JOSE.JWS.compact()
 
+      token = Flame.IdToken.new(token)
       assert {:error, "Invalid signature"} = Accounts.verify_session(token)
     end
   end
