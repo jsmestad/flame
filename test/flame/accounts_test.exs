@@ -390,7 +390,15 @@ defmodule Flame.AccountsTest do
 
   describe "verify_session/1" do
     test "returns a working value" do
-      token = ExFirebaseAuth.Mock.generate_token("my_user_id", %{"email" => "foo@bar.example"})
+      now = Epoch.now()
+
+      token =
+        ExFirebaseAuth.Mock.generate_token("my_user_id", %{
+          "email" => "foo@bar.example",
+          "iat" => now,
+          "exp" => now + 10,
+          "auth_time" => now - 10
+        })
 
       assert {:ok, %Flame.Token{sub: "my_user_id", email: "foo@bar.example"}} =
                Accounts.verify_session(token)

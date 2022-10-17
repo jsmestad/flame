@@ -67,14 +67,13 @@ defmodule Flame.Projects do
 
   def check_revoked({:error, _} = result), do: result
 
-  def check_revoked({:ok, %Flame.Token{sub: local_id, iat: iat} = token})
-      when is_binary(local_id) and is_integer(iat) do
-    case Flame.Accounts.get_user_by_local_id(local_id) do
+  def check_revoked({:ok, %Flame.Token{} = token}) do
+    case Flame.Accounts.get_user_by_local_id(token.sub) do
       {:ok, %Flame.User{disabled: true}} ->
         {:error, :user_disabled}
 
       {:ok, %Flame.User{valid_since: earliest_iat}} ->
-        if iat >= earliest_iat do
+        if token.iat >= DateTime.from_unix!(earliest_iat) do
           {:ok, token}
         else
           {:error, :cookie_revoked}

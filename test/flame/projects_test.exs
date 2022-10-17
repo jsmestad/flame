@@ -38,7 +38,13 @@ defmodule Flame.ProjectsTest do
 
   describe "verify_session/1" do
     test "passes when token itself is valid" do
-      mock_cookie = ExFirebaseAuth.Mock.generate_cookie("1234", %{"email" => "foo@example.com"})
+      mock_cookie =
+        ExFirebaseAuth.Mock.generate_cookie("1234", %{
+          "email" => "foo@example.com",
+          "iat" => Epoch.now(),
+          "exp" => Epoch.now() + 10,
+          "auth_time" => Epoch.now() - 10
+        })
 
       assert {:ok, %Flame.Token{sub: "1234", email: "foo@example.com"}} =
                Projects.verify_session(mock_cookie)
@@ -55,11 +61,11 @@ defmodule Flame.ProjectsTest do
   describe "verify_session/2" do
     test "passes when cookie has not been revoked" do
       cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{
+        ExFirebaseAuth.Mock.generate_cookie("1234", %{
           "email" => "foo@example.com",
           "iat" => Epoch.now(),
           "exp" => Epoch.now() + 10,
-          "user_id" => "1234"
+          "auth_time" => Epoch.now() - 10
         })
 
       # NOTE kid is missing in emulator, so using bypass
@@ -86,7 +92,8 @@ defmodule Flame.ProjectsTest do
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
           "iat" => now,
-          "exp" => now + 10
+          "exp" => now + 10,
+          "auth_time" => now - 10
         })
 
       # NOTE kid is missing in emulator, so using bypass
@@ -120,7 +127,8 @@ defmodule Flame.ProjectsTest do
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
           "iat" => now,
-          "exp" => now + 10
+          "exp" => now + 10,
+          "auth_time" => now - 10
         })
 
       # NOTE kid is missing in emulator, so using bypass
@@ -141,10 +149,13 @@ defmodule Flame.ProjectsTest do
     end
 
     test "fails when user is unknown" do
+      now = Epoch.now()
+
       mock_cookie =
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
-          "iat" => Epoch.now()
+          "iat" => now,
+          "auth_time" => now - 10
         })
 
       assert Projects.verify_session(mock_cookie, verify: true) == {:error, :user_not_found}

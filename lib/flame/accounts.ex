@@ -13,8 +13,9 @@ defmodule Flame.Accounts do
     @type provider :: String.t()
     @type local_id :: String.t()
     @type token :: Flame.Token.t()
+    @type raw_token :: String.t()
 
-    @callback verify_session(token) :: {:ok, token} | {:error, reason :: String.t()}
+    @callback verify_session(token | raw_token) :: {:ok, token} | {:error, reason :: String.t()}
 
     @doc """
     https://firebase.google.com/docs/reference/rest/auth#section-sign-in-email-password
@@ -98,7 +99,7 @@ defmodule Flame.Accounts do
     @doc """
     https://firebase.google.com/docs/reference/rest/auth#section-get-account-info
     """
-    @callback get_user(token) ::
+    @callback get_user(token | raw_token) ::
                 {:ok, user} | {:error, :user_not_found | :multiple_matches}
 
     @doc """
@@ -199,6 +200,10 @@ defmodule Flame.Accounts do
   end
 
   @impl true
+  def verify_session(%Flame.Token{value: token}) do
+    Flame.Token.verify(:id_token, token)
+  end
+
   def verify_session(token) when is_binary(token) do
     Flame.Token.verify(:id_token, token)
   end
@@ -236,6 +241,10 @@ defmodule Flame.Accounts do
   end
 
   @impl true
+  def get_user(%Flame.Token{value: token}) do
+    get_user(token)
+  end
+
   def get_user(token) when is_binary(token) do
     case do_request("lookup", %{idToken: token}) do
       {:ok, %{"users" => [user]}} ->
