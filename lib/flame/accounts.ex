@@ -9,12 +9,12 @@ defmodule Flame.Accounts do
     @typep user :: Flame.User.t()
     @typep pw :: String.t()
     @typep email :: String.t()
-    @type token :: String.t()
     @type code :: String.t()
     @type provider :: String.t()
     @type local_id :: String.t()
+    @type token :: Flame.Token.t()
 
-    @callback verify_session(token) :: {:ok, String.t(), String.t()} | {:error, String.t()}
+    @callback verify_session(token) :: {:ok, token} | {:error, reason :: String.t()}
 
     @doc """
     https://firebase.google.com/docs/reference/rest/auth#section-sign-in-email-password
@@ -26,13 +26,13 @@ defmodule Flame.Accounts do
     USER_DISABLED: The user account has been disabled by an administrator.
     """
     @callback sign_in(email, pw) ::
-                {:ok, token, local_id} | {:error, :invalid_credentials}
+                {:ok, token} | {:error, :invalid_credentials}
 
     @doc """
     https://cloud.google.com/identity-platform/docs/use-rest-api#section-verify-custom-token
     """
     @callback sign_in(local_id) ::
-                {:ok, token, local_id} | {:error, :invalid_custom_token}
+                {:ok, token} | {:error, :invalid_custom_token}
 
     @callback find_user_by_email(email) ::
                 {:ok, user} | {:error, :user_not_found | :multiple_matches}
@@ -188,7 +188,7 @@ defmodule Flame.Accounts do
              token: token,
              returnSecureToken: true
            }) do
-      {:ok, id_token, local_id}
+      {:ok, Flame.Token.new(id_token)}
     else
       {:error, :invalid_custom_token} ->
         {:error, :invalid_custom_token}
@@ -200,13 +200,7 @@ defmodule Flame.Accounts do
 
   @impl true
   def verify_session(token) when is_binary(token) do
-    case ExFirebaseAuth.Token.verify_token(token) do
-      {:ok, user_id, %{fields: %{"email" => email}}} ->
-        {:ok, user_id, email}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    Flame.Token.verify(:id_token, token)
   end
 
   @impl true
@@ -216,9 +210,8 @@ defmodule Flame.Accounts do
            password: password,
            returnSecureToken: true
          }) do
-      {:ok,
-       %{"registered" => true, "idToken" => id_token, "refreshToken" => _, "localId" => local_id}} ->
-        {:ok, id_token, local_id}
+      {:ok, %{"registered" => true, "idToken" => id_token}} ->
+        {:ok, Flame.Token.new(id_token)}
 
       {:error, :email_not_found} ->
         {:error, :invalid_credentials}
@@ -323,10 +316,10 @@ defmodule Flame.Accounts do
 
   @impl true
   def revoke_refresh_tokens(local_id) when is_binary(local_id) do
-    with {:ok, token, _} <- sign_in(local_id),
+    with {:ok, token} <- sign_in(local_id),
          {:ok, %{"idToken" => _id_token, "localId" => ^local_id}} <-
            do_request("update", %{
-             idToken: token,
+             idToken: token.value,
              localId: local_id,
              validSince: Epoch.now()
            }) do

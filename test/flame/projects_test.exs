@@ -30,18 +30,18 @@ defmodule Flame.ProjectsTest do
     end
 
     test "exchanges id token for a cookie session", %{user: user} do
-      {:ok, token, _} = Flame.Accounts.sign_in(user.local_id)
+      {:ok, token} = Flame.Accounts.sign_in(user.local_id)
 
-      assert {:ok, _} = Projects.create_session_cookie(token, @duration)
+      assert {:ok, _} = Projects.create_session_cookie(token.value, @duration)
     end
   end
 
   describe "verify_session/1" do
     test "passes when token itself is valid" do
-      mock_cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{"email" => "foo@example.com"})
+      mock_cookie = ExFirebaseAuth.Mock.generate_cookie("1234", %{"email" => "foo@example.com"})
 
-      assert {:ok, "user_id", "foo@example.com"} = Projects.verify_session(mock_cookie)
+      assert {:ok, %Flame.Token{sub: "1234", email: "foo@example.com"}} =
+               Projects.verify_session(mock_cookie)
     end
 
     test "fails on expired tokens" do
@@ -58,7 +58,8 @@ defmodule Flame.ProjectsTest do
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
           "iat" => Epoch.now(),
-          "exp" => Epoch.now() + 10
+          "exp" => Epoch.now() + 10,
+          "user_id" => "1234"
         })
 
       # NOTE kid is missing in emulator, so using bypass
@@ -73,7 +74,7 @@ defmodule Flame.ProjectsTest do
       data = %{users: [user_fixture()]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert {:ok, _, _} = Projects.verify_session(cookie, verify: true)
+      assert {:ok, %Flame.Token{}} = Projects.verify_session(cookie, verify: true)
     after
       Application.put_env(:flame, Flame, @existing_config)
     end

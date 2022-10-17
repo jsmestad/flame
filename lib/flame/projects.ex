@@ -43,15 +43,9 @@ defmodule Flame.Projects do
   It does not check for revoked or disabled users, use verify_session/2 for that.
   """
   @spec verify_session(cookie) ::
-          {:ok, String.t(), String.t()} | {:error, String.t()}
+          {:ok, Flame.Token.t()} | {:error, String.t()}
   def verify_session(cookie_token) do
-    case ExFirebaseAuth.Cookie.verify_cookie(cookie_token) do
-      {:ok, user_id, %{fields: %{"email" => email}}} ->
-        {:ok, user_id, email}
-
-      {:error, reason} ->
-        {:error, reason}
-    end
+    Flame.Token.verify(:cookie, cookie_token)
   end
 
   @doc """
@@ -61,26 +55,19 @@ defmodule Flame.Projects do
   This was reverse-engineered from the Node.JS and Go Flame SDK.
   """
   @spec verify_session(cookie, opts :: [verify: boolean]) ::
-          {:ok, String.t(), String.t()} | {:error, :cookie_revoked | :user_not_found}
+          {:ok, Flame.Token.t()} | {:error, :cookie_revoked | :user_not_found}
   def verify_session(cookie_token, opts) do
     if Keyword.get(opts, :verify, true) do
-      cookie_token
-      |> ExFirebaseAuth.Cookie.verify_cookie()
+      Flame.Token.verify(:cookie, cookie_token)
       |> check_revoked()
     else
-      case ExFirebaseAuth.Cookie.verify_cookie(cookie_token) do
-        {:ok, user_id, %{fields: %{"email" => email}}} ->
-          {:ok, user_id, email}
-
-        {:error, reason} ->
-          {:error, reason}
-      end
+      Flame.Token.verify(:cookie, cookie_token)
     end
   end
 
   def check_revoked({:error, _} = result), do: result
 
-  def check_revoked({:ok, local_id, %{fields: %{"email" => email, "iat" => iat}}})
+  def check_revoked({:ok, %Flame.Token{sub: local_id, iat: iat} = token})
       when is_binary(local_id) and is_integer(iat) do
     case Flame.Accounts.get_user_by_local_id(local_id) do
       {:ok, %Flame.User{disabled: true}} ->
@@ -88,7 +75,7 @@ defmodule Flame.Projects do
 
       {:ok, %Flame.User{valid_since: earliest_iat}} ->
         if iat >= earliest_iat do
-          {:ok, local_id, email}
+          {:ok, token}
         else
           {:error, :cookie_revoked}
         end

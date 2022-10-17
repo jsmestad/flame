@@ -106,7 +106,10 @@ defmodule Flame.AccountsTest do
     setup [:seed_user]
 
     test "returns a secure token", %{user: user, password: password} do
-      assert {:ok, _, _} = Accounts.sign_in(user.email, password)
+      expected_id = user.local_id
+
+      assert {:ok, %Flame.Token{value: _, sub: ^expected_id}} =
+               Accounts.sign_in(user.email, password)
     end
 
     test "returns error with incorrect password", %{user: user} do
@@ -241,7 +244,7 @@ defmodule Flame.AccountsTest do
 
       assert {:ok, %Flame.User{}} = Accounts.update_user_password(user.local_id, "new-password")
 
-      assert {:ok, _, _} = Accounts.sign_in(user.email, "new-password")
+      assert {:ok, %Flame.Token{}} = Accounts.sign_in(user.email, "new-password")
     end
 
     test "fails when user is missing" do
@@ -388,7 +391,9 @@ defmodule Flame.AccountsTest do
   describe "verify_session/1" do
     test "returns a working value" do
       token = ExFirebaseAuth.Mock.generate_token("my_user_id", %{"email" => "foo@bar.example"})
-      assert {:ok, "my_user_id", "foo@bar.example"} == Accounts.verify_session(token)
+
+      assert {:ok, %Flame.Token{sub: "my_user_id", email: "foo@bar.example"}} =
+               Accounts.verify_session(token)
     end
 
     test "fails on expired JWT" do
