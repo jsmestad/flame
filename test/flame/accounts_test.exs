@@ -30,7 +30,7 @@ defmodule Flame.AccountsTest do
       user = build(:user, email: "yoav@cloudinary.com", password: "secret-password")
 
       assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
-      assert {:ok, _, _} = Accounts.sign_in(user.email, "secret-password")
+      assert {:ok, %Flame.Token{}} = Accounts.sign_in(user.email, "secret-password")
 
       %{status: 200} =
         Tesla.post!(Flame.client(), "/accounts:signInWithIdp", %{
@@ -62,7 +62,7 @@ defmodule Flame.AccountsTest do
       user = build(:user, email: "yoav@cloudinary.com", password: "secret-password")
 
       assert Accounts.fetch_providers(user.email) == {:ok, ["password"]}
-      assert {:ok, _, _} = Accounts.sign_in(user.email, "secret-password")
+      assert {:ok, %Flame.Token{}} = Accounts.sign_in(user.email, "secret-password")
 
       %{status: 200} =
         Tesla.post!(Flame.client(), "/accounts:signInWithIdp", %{
