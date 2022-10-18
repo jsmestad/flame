@@ -29,8 +29,8 @@ defmodule Flame.ProjectsTest do
                {:error, :duration_too_long}
     end
 
-    test "exchanges id token for a cookie session", %{user: user} do
-      {:ok, token, _} = Flame.Accounts.sign_in(user.local_id)
+    test "exchanges id token for a cookie session", %{user: user, password: password} do
+      {:ok, token} = Flame.Accounts.sign_in(user.email, password)
 
       assert {:ok, _} = Projects.create_session_cookie(token, @duration)
     end
@@ -39,14 +39,27 @@ defmodule Flame.ProjectsTest do
   describe "verify_session/1" do
     test "passes when token itself is valid" do
       mock_cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{"email" => "foo@example.com"})
+        ExFirebaseAuth.Mock.generate_cookie("1234", %{
+          "iat" => Epoch.now(),
+          "exp" => Epoch.now() + 10,
+          "auth_time" => Epoch.now() - 10
+        })
+        |> Flame.SessionCookie.new!()
 
-      assert {:ok, "user_id", "foo@example.com"} = Projects.verify_session(mock_cookie)
+      assert {:ok, %Flame.SessionCookie{sub: "1234"}} = Projects.verify_session(mock_cookie)
     end
 
     test "fails on expired tokens" do
+      now = Epoch.now()
+
       mock_cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{"email" => "foo@example.com", "exp" => 1})
+        ExFirebaseAuth.Mock.generate_cookie("user_id", %{
+          "email" => "foo@example.com",
+          "exp" => now - 10,
+          "iat" => now - 20,
+          "auth_time" => now - 20
+        })
+        |> Flame.SessionCookie.new!()
 
       assert Projects.verify_session(mock_cookie) == {:error, "Expired JWT"}
     end
@@ -55,11 +68,13 @@ defmodule Flame.ProjectsTest do
   describe "verify_session/2" do
     test "passes when cookie has not been revoked" do
       cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{
+        ExFirebaseAuth.Mock.generate_cookie("1234", %{
           "email" => "foo@example.com",
           "iat" => Epoch.now(),
-          "exp" => Epoch.now() + 10
+          "exp" => Epoch.now() + 10,
+          "auth_time" => Epoch.now() - 10
         })
+        |> Flame.SessionCookie.new!()
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
@@ -73,7 +88,7 @@ defmodule Flame.ProjectsTest do
       data = %{users: [user_fixture()]}
       mock_response(bypass, "lookup", data, 200)
 
-      assert {:ok, _, _} = Projects.verify_session(cookie, verify: true)
+      assert {:ok, %Flame.SessionCookie{}} = Projects.verify_session(cookie, verify: true)
     after
       Application.put_env(:flame, Flame, @existing_config)
     end
@@ -85,8 +100,10 @@ defmodule Flame.ProjectsTest do
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
           "iat" => now,
-          "exp" => now + 10
+          "exp" => now + 10,
+          "auth_time" => now - 10
         })
+        |> Flame.SessionCookie.new!()
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
@@ -106,8 +123,16 @@ defmodule Flame.ProjectsTest do
     end
 
     test "fails on expired tokens" do
+      now = Epoch.now()
+
       mock_cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{"email" => "foo@example.com", "exp" => 1})
+        ExFirebaseAuth.Mock.generate_cookie("user_id", %{
+          "email" => "foo@example.com",
+          "exp" => now - 10,
+          "iat" => now - 20,
+          "auth_time" => now - 20
+        })
+        |> Flame.SessionCookie.new!()
 
       assert Projects.verify_session(mock_cookie, verify: true) == {:error, "Expired JWT"}
     end
@@ -119,8 +144,10 @@ defmodule Flame.ProjectsTest do
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
           "iat" => now,
-          "exp" => now + 10
+          "exp" => now + 10,
+          "auth_time" => now - 10
         })
+        |> Flame.SessionCookie.new!()
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
@@ -140,11 +167,15 @@ defmodule Flame.ProjectsTest do
     end
 
     test "fails when user is unknown" do
+      now = Epoch.now()
+
       mock_cookie =
         ExFirebaseAuth.Mock.generate_cookie("user_id", %{
           "email" => "foo@example.com",
-          "iat" => Epoch.now()
+          "iat" => now,
+          "auth_time" => now - 10
         })
+        |> Flame.SessionCookie.new!()
 
       assert Projects.verify_session(mock_cookie, verify: true) == {:error, :user_not_found}
     end
