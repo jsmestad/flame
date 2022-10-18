@@ -123,8 +123,15 @@ defmodule Flame.ProjectsTest do
     end
 
     test "fails on expired tokens" do
+      now = Epoch.now()
+
       mock_cookie =
-        ExFirebaseAuth.Mock.generate_cookie("user_id", %{"email" => "foo@example.com", "exp" => 1})
+        ExFirebaseAuth.Mock.generate_cookie("user_id", %{
+          "email" => "foo@example.com",
+          "exp" => now - 10,
+          "iat" => now - 20,
+          "auth_time" => now - 20
+        })
         |> Flame.SessionCookie.new()
 
       assert Projects.verify_session(mock_cookie, verify: true) == {:error, "Expired JWT"}
