@@ -43,14 +43,14 @@ defmodule Flame.SessionCookie do
     :value
   ]
 
-  @spec new(cookie) :: t | no_return
-  def new(cookie) do
+  @spec new!(cookie) :: t | no_return
+  def new!(cookie) do
     %JOSE.JWT{fields: fields} = JOSE.JWT.peek_payload(cookie)
-    new(cookie, fields)
+    new!(cookie, fields)
   end
 
-  @spec new(cookie, map) :: t
-  def new(cookie, fields) do
+  @spec new!(cookie, map) :: t | no_return
+  def new!(cookie, fields) do
     struct!(__MODULE__, %{
       aud: fields["aud"],
       auth_time: DateTime.from_unix!(fields["auth_time"]),
@@ -64,9 +64,6 @@ defmodule Flame.SessionCookie do
     })
   end
 
-  def from_unix!(nil), do: nil
-  def from_unix!(val), do: DateTime.from_unix!(val)
-
   @doc """
   Checks the session cookie for validity.
 
@@ -75,7 +72,7 @@ defmodule Flame.SessionCookie do
   @spec verify(String.t() | t) :: {:ok, t} | {:error, any}
   def verify(cookie) when is_binary(cookie) do
     case ExFirebaseAuth.Cookie.verify_cookie(cookie) do
-      {:ok, _user_id, %{fields: fields}} -> {:ok, new(cookie, fields)}
+      {:ok, _user_id, %{fields: fields}} -> {:ok, new!(cookie, fields)}
       {:error, reason} -> {:error, reason}
     end
   end

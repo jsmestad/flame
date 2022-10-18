@@ -52,14 +52,14 @@ defmodule Flame.IdToken do
     :value
   ]
 
-  @spec new(token) :: t | no_return
-  def new(token) do
+  @spec new!(token) :: t | no_return
+  def new!(token) do
     %JOSE.JWT{fields: fields} = JOSE.JWT.peek_payload(token)
-    new(token, fields)
+    new!(token, fields)
   end
 
-  @spec new(token, map) :: t
-  def new(token, fields) do
+  @spec new!(token, map) :: t | no_return
+  def new!(token, fields) do
     struct!(__MODULE__, %{
       aud: fields["aud"],
       auth_time: DateTime.from_unix!(fields["auth_time"]),
@@ -76,9 +76,6 @@ defmodule Flame.IdToken do
     })
   end
 
-  def from_unix!(nil), do: nil
-  def from_unix!(val), do: DateTime.from_unix!(val)
-
   @doc """
   Checks the token for validity against session cookies or tokens.
 
@@ -87,7 +84,7 @@ defmodule Flame.IdToken do
   @spec verify(String.t() | t) :: {:ok, t} | {:error, any}
   def verify(token) when is_binary(token) do
     case ExFirebaseAuth.Token.verify_token(token) do
-      {:ok, _user_id, %{fields: fields}} -> {:ok, new(token, fields)}
+      {:ok, _user_id, %{fields: fields}} -> {:ok, new!(token, fields)}
       {:error, reason} -> {:error, reason}
     end
   end

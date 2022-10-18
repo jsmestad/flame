@@ -192,7 +192,7 @@ defmodule Flame.Accounts do
              token: token,
              returnSecureToken: true
            }) do
-      {:ok, Flame.SessionCookie.new(id_token)}
+      {:ok, Flame.SessionCookie.new!(id_token)}
     else
       {:error, :invalid_custom_token} -> {:error, :invalid_custom_token}
       err -> err
@@ -212,7 +212,7 @@ defmodule Flame.Accounts do
            returnSecureToken: true
          }) do
       {:ok, %{"registered" => true, "idToken" => id_token}} ->
-        {:ok, Flame.IdToken.new(id_token)}
+        {:ok, Flame.IdToken.new!(id_token)}
 
       {:error, :email_not_found} ->
         {:error, :invalid_credentials}

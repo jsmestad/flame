@@ -399,7 +399,7 @@ defmodule Flame.AccountsTest do
           "exp" => now + 10,
           "auth_time" => now - 10
         })
-        |> Flame.IdToken.new()
+        |> Flame.IdToken.new!()
 
       assert {:ok, %Flame.IdToken{sub: "my_user_id", email: "foo@bar.example"}} =
                Accounts.verify_session(token)
@@ -416,7 +416,7 @@ defmodule Flame.AccountsTest do
 
       valid_token =
         ExFirebaseAuth.Mock.generate_token(sub, claims)
-        |> Flame.IdToken.new()
+        |> Flame.IdToken.new!()
 
       assert {:error, "Expired JWT"} = Accounts.verify_session(valid_token)
     end
@@ -445,7 +445,7 @@ defmodule Flame.AccountsTest do
         )
         |> JOSE.JWS.compact()
 
-      token = Flame.IdToken.new(token)
+      token = Flame.IdToken.new!(token)
       assert {:error, "Invalid signature"} = Accounts.verify_session(token)
     end
   end

@@ -30,7 +30,7 @@ defmodule Flame.Projects do
            idToken: id_token.value,
            duration: to_string(duration)
          }) do
-      {:ok, %{"sessionCookie" => cookie}} -> {:ok, Flame.SessionCookie.new(cookie)}
+      {:ok, %{"sessionCookie" => cookie}} -> {:ok, Flame.SessionCookie.new!(cookie)}
       {:error, :invalid_id_token} = err -> err
       {:error, :token_expired} = err -> err
       {:error, :user_not_found} = err -> err

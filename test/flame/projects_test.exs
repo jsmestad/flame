@@ -44,7 +44,7 @@ defmodule Flame.ProjectsTest do
           "exp" => Epoch.now() + 10,
           "auth_time" => Epoch.now() - 10
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       assert {:ok, %Flame.SessionCookie{sub: "1234"}} = Projects.verify_session(mock_cookie)
     end
@@ -59,7 +59,7 @@ defmodule Flame.ProjectsTest do
           "iat" => now - 20,
           "auth_time" => now - 20
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       assert Projects.verify_session(mock_cookie) == {:error, "Expired JWT"}
     end
@@ -74,7 +74,7 @@ defmodule Flame.ProjectsTest do
           "exp" => Epoch.now() + 10,
           "auth_time" => Epoch.now() - 10
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
@@ -103,7 +103,7 @@ defmodule Flame.ProjectsTest do
           "exp" => now + 10,
           "auth_time" => now - 10
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
@@ -132,7 +132,7 @@ defmodule Flame.ProjectsTest do
           "iat" => now - 20,
           "auth_time" => now - 20
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       assert Projects.verify_session(mock_cookie, verify: true) == {:error, "Expired JWT"}
     end
@@ -147,7 +147,7 @@ defmodule Flame.ProjectsTest do
           "exp" => now + 10,
           "auth_time" => now - 10
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       # NOTE kid is missing in emulator, so using bypass
       bypass = Bypass.open(port: 3000)
@@ -175,7 +175,7 @@ defmodule Flame.ProjectsTest do
           "iat" => now,
           "auth_time" => now - 10
         })
-        |> Flame.SessionCookie.new()
+        |> Flame.SessionCookie.new!()
 
       assert Projects.verify_session(mock_cookie, verify: true) == {:error, :user_not_found}
     end
