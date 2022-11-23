@@ -402,6 +402,7 @@ defmodule Flame.Accounts do
         "INVALID_ID_TOKEN" -> :invalid_id_token
         "INVALID_OOB_CODE" -> :invalid_oob_code
         "INVALID_PASSWORD" -> :invalid_password
+        "TOO_MANY_ATTEMPTS_TRY_LATER" -> :too_many_attempts_try_later
         "USER_NOT_FOUND" -> :user_not_found
         "WEAK_PASSWORD" -> :weak_password
       end
